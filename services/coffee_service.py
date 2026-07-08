@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import Bot
 from aiogram.enums import ChatType
@@ -21,10 +21,68 @@ from utils.poll_state import PollState
 class CoffeeService:
 
     @staticmethod
-    def is_group(chat_type: str) ->bool:
+    def is_group(chat_type: str) -> bool:
         return chat_type in (
             ChatType.GROUP,
             ChatType.SUPERGROUP,
+        )
+
+
+    @staticmethod
+    def build_meeting(time: str) -> datetime:
+        """
+        Собирает дату встречи.
+
+        Если указанное время уже прошло сегодня,
+        считается, что встреча будет завтра.
+        """
+
+        now = datetime.now()
+
+        meeting = datetime.strptime(
+            f"{now:%Y-%m-%d} {time}",
+            "%Y-%m-%d %H:%M",
+        )
+
+        if meeting <= now:
+            meeting += timedelta(days=1)
+
+        return meeting
+
+    @staticmethod
+    def hours_left(
+        meeting_at: datetime,
+    ) -> float:
+        return (
+            meeting_at - datetime.now()
+        ).total_seconds() / 3600
+
+    @staticmethod
+    def get_poll_state(
+        meeting_at: datetime,
+        min_vote_hours: int,
+    ) -> PollState:
+
+        hours_left = CoffeeService.hours_left(
+            meeting_at,
+        )
+
+        return PollState(
+            hours_left=hours_left,
+            allow_later=(
+                hours_left >= min_vote_hours
+            ),
+        )
+
+    @staticmethod
+    def allow_later_vote(
+        meeting_at: datetime,
+        min_vote_hours: int,
+    ) -> bool:
+        return (
+            CoffeeService.hours_left(
+                meeting_at,
+            ) >= min_vote_hours
         )
 
     async def get_active_poll(
@@ -194,34 +252,24 @@ class CoffeeService:
             "administrator",
             "creator",
         )
+    
+    async def cancel_poll(
+        self,
+        poll_id: int,
+    ):
 
-    @staticmethod
-    def get_poll_state(
-        meeting_at: datetime,
-        min_vote_hours: int,
-    ) -> PollState:
+        async with Session() as session:
 
-        hours_left = (
-            meeting_at - datetime.now()
-        ).total_seconds() / 3600
+            poll = await session.get(
+                Poll,
+                poll_id,
+            )
 
-        return PollState(
-            hours_left=hours_left,
-            allow_later=(
-                hours_left >= min_vote_hours
-            ),
-        )
+            if poll is None:
+                return
 
+            poll.status = PollStatus.CANCELLED
 
-    @staticmethod
-    def allow_later_vote(
-        meeting_at: datetime,
-        min_vote_hours: int,
-    ) -> bool:
-        return (
-            CoffeeService.hours_left(
-                meeting_at,
-            ) >= min_vote_hours
-        )
+            await session.commit()
 
 coffee_service = CoffeeService()

@@ -17,10 +17,12 @@ def confirm_short_poll_keyboard(
 ):
     kb = InlineKeyboardBuilder()
 
+    packed_time = time.replace(":", "-")
+
     kb.button(
         text="✅ Создать",
         callback_data=ConfirmShortPollCallback(
-            time=time.replace(":", "-"),
+            time=packed_time,
             place=place,
             confirm=True,
         ),
@@ -29,7 +31,7 @@ def confirm_short_poll_keyboard(
     kb.button(
         text="❌ Отмена",
         callback_data=ConfirmShortPollCallback(
-            time=time.replace(":", "-"),
+            time=packed_time,
             place=place,
             confirm=False,
         ),

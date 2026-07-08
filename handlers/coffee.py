@@ -1,24 +1,21 @@
 from datetime import datetime
-import logging
-import math
+from math import floor
 
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from services.coffee_service import coffee_service
-from services.poll_sender import send_poll
-from services.settings_service import settings_service
+from config import config
 
 from keyboards.confirm_short_poll import (
     confirm_short_poll_keyboard,
 )
 
+from services.coffee_service import coffee_service
+from services.poll_sender import send_poll
+from services.settings_service import settings_service
+
 from utils.coffee_parser import parse_coffee_command
-
-from config import config
-
-logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -38,9 +35,9 @@ async def coffee(message: Message):
         message.chat.id,
     )
 
-    if active:
+    if active is not None:
         await message.answer(
-            "⚠️ Голосование уже существует."
+            "⚠️ Уже есть активное голосование."
         )
         return
 
@@ -62,10 +59,14 @@ async def coffee(message: Message):
         )
         return
 
-    meeting = datetime.strptime(
-        f"{datetime.now():%Y-%m-%d} {time}",
-        "%Y-%m-%d %H:%M",
+    meeting = coffee_service.build_meeting(
+        time,
     )
+    if meeting <= datetime.now():
+        await message.answer(
+            "❌ Нельзя создать голосование на прошедшее время."
+        )
+        return
 
     settings = await settings_service.get(
         message.chat.id,
@@ -76,21 +77,36 @@ async def coffee(message: Message):
         settings.min_vote_hours,
     )
 
+    #
+    # До встречи меньше минимального интервала.
+    #
     if not state.allow_later:
 
-        suggested = math.floor(state.hours_left)
+        hours_left = max(
+            0,
+            state.hours_left,
+        )
 
-        if suggested < 0:
-            suggested = 0
+        suggested = max(
+            1,
+            floor(hours_left),
+        )
 
         await message.answer(
             (
-                f"⚠️ До встречи осталось всего {state.hours_left:.1f} ч.\n\n"
-                f"Сейчас минимальный интервал составляет "
+                f"⚠️ До встречи осталось всего "
+                f"{hours_left:.1f} ч.\n\n"
+
+                f"Сейчас минимальный интервал "
+                f"составляет "
                 f"{settings.min_vote_hours} ч.\n\n"
+
                 "Можно:\n"
-                "• оставить текущий интервал и создать голосование;\n"
-                "• уменьшить интервал командой\n\n"
+                "• создать голосование без возможности "
+                "«Отвечу позже»;\n"
+
+                "• уменьшить минимальный интервал:\n\n"
+
                 f"/interval {suggested}"
             ),
             reply_markup=confirm_short_poll_keyboard(
@@ -99,8 +115,11 @@ async def coffee(message: Message):
             ),
         )
 
-    return
+        return
 
+    #
+    # Создаем обычное голосование.
+    #
     poll = await coffee_service.create_poll(
         chat_id=message.chat.id,
         author_id=message.from_user.id,
@@ -111,5 +130,4 @@ async def coffee(message: Message):
     await send_poll(
         message,
         poll.id,
-        allow_later=True,
     )

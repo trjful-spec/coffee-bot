@@ -6,6 +6,10 @@ from database.db import Session
 from database.models import Poll
 from database.models import PollStatus
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class PollService:
 
@@ -60,6 +64,12 @@ class PollService:
             )
 
             await session.commit()
+
+            logger.debug(
+                "Poll %s time updated to %s",
+                poll_id,
+                meeting_at,
+            )
 
 
 poll_service = PollService()

@@ -3,21 +3,30 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message
 
 from keyboards.vote import vote_keyboard
+
 from services.coffee_service import coffee_service
 from services.settings_service import settings_service
-from utils.message_builder import build_poll_text
+
+from utils.message_builder import (
+    build_poll_text,
+    later_deadline,
+)
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def send_poll(
     source_message: Message,
     poll_id: int,
-    allow_later: bool = True,
 ):
-    poll = await coffee_service.get_poll_dto(
+
+    dto = await coffee_service.get_poll_dto(
         poll_id,
     )
 
-    if poll is None:
+    if dto is None:
         await source_message.answer(
             "Ошибка создания голосования."
         )
@@ -27,20 +36,29 @@ async def send_poll(
         source_message.chat.id,
     )
 
+    state = coffee_service.get_poll_state(
+        dto.meeting_at,
+        settings.min_vote_hours,
+    )
+
     msg = await source_message.answer(
         build_poll_text(
-            poll,
-            show_later=allow_later,
+            dto,
+            show_later=state.allow_later,
             later_hours=settings.min_vote_hours,
         ),
         reply_markup=vote_keyboard(
-            poll,
-            show_later=allow_later,
+            dto,
+            show_later=state.allow_later,
+            later_until=later_deadline(
+                dto.meeting_at,
+                settings.min_vote_hours,
+            ),
         ),
     )
 
     await coffee_service.set_message_id(
-        poll.id,
+        dto.id,
         msg.message_id,
     )
 
@@ -48,7 +66,9 @@ async def send_poll(
         await msg.pin(
             disable_notification=True,
         )
+
     except TelegramBadRequest:
+
         await source_message.answer(
             "⚠️ Не удалось закрепить сообщение.\n"
             "Выдайте боту право закреплять сообщения."
@@ -59,6 +79,7 @@ async def update_poll_message(
     bot: Bot,
     poll_id: int,
 ):
+
     poll = await coffee_service.get_poll(
         poll_id,
     )
@@ -81,20 +102,59 @@ async def update_poll_message(
     )
 
     state = coffee_service.get_poll_state(
-        poll.meeting_at,
+        dto.meeting_at,
         settings.min_vote_hours,
     )
 
-    await bot.edit_message_text(
-        chat_id=poll.chat_id,
-        message_id=poll.message_id,
-        text=build_poll_text(
-            dto,
-            show_later=state.allow_later,
-            later_hours=settings.min_vote_hours,
-        ),
-        reply_markup=vote_keyboard(
-            dto,
-            show_later=state.allow_later,
-        ),
-    )
+    try:
+
+        logger.debug(
+            "Meeting: %s",
+            dto.meeting_at,
+        )
+
+        logger.debug(
+            "Interval: %s",
+            settings.min_vote_hours,
+        )
+        logger.debug(
+            "Text:\n%s",
+            build_poll_text(
+                dto,
+                show_later=state.allow_later,
+                later_hours=settings.min_vote_hours,
+            ),
+        )
+        logger.debug(
+            "Later until: %s",
+            later_deadline(
+                dto.meeting_at,
+                settings.min_vote_hours,
+            ),
+        )
+
+        await bot.edit_message_text(
+            chat_id=poll.chat_id,
+            message_id=poll.message_id,
+            text=build_poll_text(
+                dto,
+                show_later=state.allow_later,
+                later_hours=settings.min_vote_hours,
+            ),
+            reply_markup=vote_keyboard(
+                dto,
+                show_later=state.allow_later,
+                later_until=later_deadline(
+                    dto.meeting_at,
+                    settings.min_vote_hours,
+                ),
+            ),
+        )
+
+
+    except TelegramBadRequest as e:
+
+        if "message is not modified" in str(e):
+            return
+
+        raise

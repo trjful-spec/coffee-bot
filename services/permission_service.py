@@ -1,4 +1,5 @@
 from aiogram import Bot
+from aiogram.exceptions import TelegramBadRequest
 
 from database.models import Poll
 
@@ -16,10 +17,13 @@ class PermissionService:
         if poll.author_id == user_id:
             return True
 
-        member = await bot.get_chat_member(
-            chat_id,
-            user_id,
-        )
+        try:
+            member = await bot.get_chat_member(
+                chat_id,
+                user_id,
+            )
+        except TelegramBadRequest:
+            return False
 
         return member.status in (
             "administrator",

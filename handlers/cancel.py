@@ -9,8 +9,8 @@ from utils.message_builder import build_poll_text
 router = Router()
 
 
-@router.message(Command("close"))
-async def close_poll(
+@router.message(Command("cancel"))
+async def cancel_poll(
     message: Message,
 ):
 
@@ -35,12 +35,12 @@ async def close_poll(
         message.bot,
     ):
         await message.answer(
-            "❌ Закрыть голосование может только "
+            "❌ Отменить голосование может только "
             "создатель или администратор."
         )
         return
 
-    await coffee_service.close_poll(
+    await coffee_service.cancel_poll(
         poll.id,
     )
 
@@ -48,33 +48,27 @@ async def close_poll(
         poll.id,
     )
 
-    if dto is None:
-        await message.answer(
-            "⚠️ Голосование уже закрыто."
-        )
-        return
+    if poll.message_id:
 
-    try:
-        await message.bot.edit_message_text(
-            chat_id=poll.chat_id,
-            message_id=poll.message_id,
-            text=(
-                "🔒 <b>Голосование закрыто</b>\n\n"
-                + build_poll_text(dto)
-            ),
-            reply_markup=None,
-        )
-    except TelegramBadRequest:
-        pass
+        try:
+            await message.bot.edit_message_text(
+                chat_id=poll.chat_id,
+                message_id=poll.message_id,
+                text="❌ <b>Голосование отменено</b>\n\n"
+                + build_poll_text(dto),
+                reply_markup=None,
+            )
+        except TelegramBadRequest:
+            pass
 
-    try:
-        await message.bot.unpin_chat_message(
-            chat_id=poll.chat_id,
-            message_id=poll.message_id,
-        )
-    except TelegramBadRequest:
-        pass
+        try:
+            await message.bot.unpin_chat_message(
+                chat_id=poll.chat_id,
+                message_id=poll.message_id,
+            )
+        except TelegramBadRequest:
+            pass
 
     await message.answer(
-        "✅ Голосование закрыто."
+        "❌ Голосование отменено."
     )

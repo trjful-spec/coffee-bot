@@ -4,6 +4,7 @@ from aiogram.types import Message
 
 from services.coffee_service import coffee_service
 from services.settings_service import settings_service
+from services.poll_updater import refresh_active_poll
 
 router = Router()
 
@@ -55,6 +56,41 @@ async def interval(message: Message):
         message.chat.id,
         hours,
     )
+
+    await refresh_active_poll(
+        message.bot,
+        message.chat.id,
+    )
+
+    await message.answer(
+        f"✅ Минимальный интервал изменён на {hours} ч."
+    )
+
+    poll = await coffee_service.get_active_poll(
+        message.chat.id,
+    )
+
+    if poll:
+        from services.poll_sender import (
+            update_poll_message,
+        )
+
+        await update_poll_message(
+            bot=message.bot,
+            poll_id=poll.id,
+        )
+
+    poll = await coffee_service.get_active_poll(
+        message.chat.id,
+    )
+
+    if poll is not None:
+        from services.poll_sender import update_poll_message
+
+        await update_poll_message(
+            bot=message.bot,
+            poll_id=poll.id,
+        )
 
     await message.answer(
         f"✅ Минимальный интервал изменён на {hours} ч."

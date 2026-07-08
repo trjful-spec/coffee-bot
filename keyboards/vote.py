@@ -14,6 +14,7 @@ class VoteCallback(
 def vote_keyboard(
     poll,
     show_later: bool = True,
+    later_until: str | None = None,
 ) -> InlineKeyboardMarkup:
 
     kb = InlineKeyboardBuilder()
@@ -35,16 +36,22 @@ def vote_keyboard(
     )
 
     if show_later:
+
+        text = "🤔 Отвечу позже"
+
+        if later_until:
+            text = f"🤔 Отвечу до {later_until}"
+
         kb.button(
-            text="🤔 Отвечу позже",
+            text=text,
             callback_data=VoteCallback(
                 poll_id=poll.id,
                 vote="later",
             ),
         )
 
-    if show_later:
         kb.adjust(3)
+
     else:
         kb.adjust(2)
 
