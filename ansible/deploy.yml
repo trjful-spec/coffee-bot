@@ -1,0 +1,8 @@
+---
+- name: Deploy Coffee Bot
+  hosts: coffee
+  become: true
+
+  roles:
+    - common
+    - bot

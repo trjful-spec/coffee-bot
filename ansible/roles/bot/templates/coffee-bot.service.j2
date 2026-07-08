@@ -1,0 +1,22 @@
+[Unit]
+Description=Coffee Telegram Bot
+After=network-online.target
+
+[Service]
+
+Type=simple
+
+User={{ bot_user }}
+Group={{ bot_group }}
+
+WorkingDirectory={{ project_path }}
+
+EnvironmentFile={{ project_path }}/.env
+
+ExecStart={{ venv_path }}/bin/python app.py
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

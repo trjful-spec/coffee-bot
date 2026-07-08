@@ -1,0 +1,61 @@
+---
+- name: Create project directory
+  file:
+    path: "{{ project_path }}"
+    state: directory
+    owner: "{{ bot_user }}"
+    group: "{{ bot_group }}"
+    mode: "0755"
+
+- name: Synchronize project
+  synchronize:
+    src: "{{ playbook_dir }}/../"
+    dest: "{{ project_path }}/"
+    delete: true
+    rsync_opts:
+      - "--filter=merge {{ playbook_dir }}/../.rsync-filter"
+
+- name: Set ownership
+  file:
+    path: "{{ project_path }}"
+    owner: "{{ bot_user }}"
+    group: "{{ bot_group }}"
+    recurse: true
+
+- name: Create virtual environment
+  command:
+    cmd: "{{ python_bin }} -m venv {{ venv_path }}"
+    creates: "{{ venv_path }}/bin/python"
+
+- name: Upgrade pip
+  command:
+    cmd: "{{ venv_path }}/bin/python -m pip install --upgrade pip"
+
+- name: Install requirements
+  command:
+    cmd: "{{ venv_path }}/bin/pip install -r {{ project_path }}/requirements.txt"
+  notify:
+    - Restart coffee-bot
+
+- name: Create .env
+  template:
+    src: env.j2
+    dest: "{{ project_path }}/.env"
+    owner: "{{ bot_user }}"
+    group: "{{ bot_group }}"
+    mode: "0600"
+  notify:
+    - Restart coffee-bot
+
+- name: Install systemd service
+  template:
+    src: coffee-bot.service.j2
+    dest: /etc/systemd/system/coffee-bot.service
+  notify:
+    - Reload systemd
+
+- name: Enable coffee-bot
+  systemd:
+    name: coffee-bot
+    enabled: true
+    state: started

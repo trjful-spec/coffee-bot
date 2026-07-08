@@ -1,0 +1,9 @@
+---
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+
+- name: Restart coffee-bot
+  systemd:
+    name: coffee-bot
+    state: restarted
