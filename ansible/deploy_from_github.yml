@@ -1,0 +1,84 @@
+---
+- name: Деплой и автозапуск Telegram-бота из GitHub
+  hosts: all
+  become: yes
+
+  vars:
+    repo_url: "https://github.com/trjful-spec/coffee-bot.git"
+    repo_branch: "master"
+
+  tasks:
+    - name: Проверяем, является ли папка Git-репозиторием
+      ansible.builtin.stat:
+        path: "{{ project_path }}/.git"
+      register: git_folder
+
+    - name: Очищаем папку, если она существует, но это не Git-репозиторий
+      ansible.builtin.file:
+        path: "{{ project_path }}"
+        state: absent
+      when: not git_folder.stat.exists
+
+    - name: 1. Стягивание свежего кода из GitHub
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_path }}"
+        version: "{{ repo_branch }}"
+        force: yes
+      register: git_result
+
+    # Исправляем права, чтобы пользователю ubuntu принадлежали все скачанные файлы
+    - name: 1.1. Настройка прав доступа к директории проекта
+      ansible.builtin.file:
+        path: "{{ project_path }}"
+        owner: "{{ bot_user }}"
+        group: "{{ bot_group }}"
+        recurse: yes
+
+    - name: 2. Установка/обновление зависимостей (pip) в Virtualenv
+      ansible.builtin.pip:
+        requirements: "{{ project_path }}/requirements.txt"
+        virtualenv: "{{ venv_path }}"
+        virtualenv_command: "{{ python_bin }} -m venv"
+      register: pip_result
+
+    # Сюда тоже добавляем правильные права, так как pip мог создать файлы от root
+    - name: 2.1. Настройка прав доступа к Virtualenv
+      ansible.builtin.file:
+        path: "{{ venv_path }}"
+        owner: "{{ bot_user }}"
+        group: "{{ bot_group }}"
+        recurse: yes
+
+    # Создаем .env файл из вашего шаблона роли bot
+    - name: 2.2. Создание файла конфигурации (.env)
+      ansible.builtin.template:
+        src: roles/bot/templates/env.j2
+        dest: "{{ project_path }}/.env"
+        owner: "{{ bot_user }}"
+        group: "{{ bot_group }}"
+        mode: '0600'  # Права только на чтение для владельца (безопасность токена)
+      register: env_result
+
+    # Создаем systemd-сервис из вашего шаблона роли bot
+    - name: 2.3. Создание/обновление Systemd unit-файла
+      ansible.builtin.template:
+        src: roles/bot/templates/coffee-bot.service.j2
+        dest: "/etc/systemd/system/{{ project_name }}.service"
+        owner: root
+        group: root
+        mode: '0644'
+      register: systemd_result
+
+    - name: 3. Перезапуск службы бота (если изменился код, конфиг или сервис)
+      ansible.builtin.systemd:
+        name: "{{ project_name }}.service"
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+      when: git_result.changed or pip_result.changed or env_result.changed or systemd_result.changed
+
+    - name: 4. Проверка статуса службы
+      ansible.builtin.systemd:
+        name: "{{ project_name }}.service"
+        state: started
