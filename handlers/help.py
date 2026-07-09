@@ -17,8 +17,9 @@ async def help_command(message: Message):
         "/coffee 15:30 Дубровка\n\n"
 
         "<b>Управление</b>\n"
-        "/close — закрыть голосование \n"
+        "/close — закрыть голосование досрочно\n"
         "/cancel — отменить голосование\n"
         "/time HH:MM — изменить время сбора\n"
-        "/interval N — изменить минимальный интервал для «Отвечу позже»\n\n"
+        "/interval N — изменить интервал напоминаний для ответивших «Отвечу позже»\n"
+        "\n https://github.com/trjful-spec/coffee-bot.git"
     )
