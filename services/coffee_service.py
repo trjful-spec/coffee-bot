@@ -319,15 +319,38 @@ class CoffeeService:
         )
     
 
-    async def get_all_active_polls(self) -> list[Poll]:
-        """Получает список всех активных опросов."""
+    async def get_polls_for_worker(self) -> list[Poll]:
+        """Получает активные опросы И закрытые опросы, которые еще не откреплены."""
+        from sqlalchemy import or_, and_
         async with Session() as session:
             result = await session.execute(
                 select(Poll).where(
-                    Poll.status == PollStatus.ACTIVE,
+                    or_(
+                        Poll.status == PollStatus.ACTIVE,
+                        and_(Poll.status == PollStatus.CLOSED, Poll.is_unpinned == False)
+                    )
                 )
             )
             return list(result.scalars().all())
+
+    async def update_reminder_state(self, poll_id: int, last_hour: int = None, final_sent: bool = None):
+        """Сохраняет состояние напоминаний в базу данных."""
+        async with Session() as session:
+            poll = await session.get(Poll, poll_id)
+            if poll:
+                if last_hour is not None:
+                    poll.last_reminder_hour = last_hour
+                if final_sent is not None:
+                    poll.final_reminder_sent = final_sent
+                await session.commit()
+
+    async def mark_as_unpinned(self, poll_id: int):
+        """Отмечает в БД, что сообщение опроса было успешно откреплено."""
+        async with Session() as session:
+            poll = await session.get(Poll, poll_id)
+            if poll:
+                poll.is_unpinned = True
+                await session.commit()
 
     async def get_later_voters(self, poll_id: int) -> list[Vote]:
         """Получает список голосов пользователей, ответивших 'Отвечу позже'."""
