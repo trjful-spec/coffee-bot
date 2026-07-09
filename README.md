@@ -82,6 +82,7 @@
 └── stop_coffee_bot.yml
 ```
 
+## Развертывание из репозитория
 При развертывании из репозитория убедитесь, что заполнены поля файла group_vars/all.yml:
 ```bash
 project_name: coffee-bot
@@ -90,7 +91,20 @@ venv_path: /opt/coffee-bot/.venv
 python_bin: /usr/bin/python3
 bot_user: ubuntu
 bot_group: ubuntu
-bot_token: "XXX"
 default_place: "Мега"
 default_time: "21:00"
+```
+И заполнен group_vars/secrets.yml
+```bash
+bot_token: "XXX"
+```
+
+## Развертывание с локального компьютера
+При развертывании из локали убедитесь, что заполнены поля файла 
+```bash
+ [$]> cat .env 
+BOT_TOKEN=XXX
+DEFAULT_PLACE=Мега
+DEFAULT_TIME=21:00
+MIN_VOTE_HOURS=3
 ```
