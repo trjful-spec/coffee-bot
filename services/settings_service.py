@@ -1,4 +1,3 @@
-from sqlalchemy import select
 
 from database.db import Session
 from database.models import ChatSettings

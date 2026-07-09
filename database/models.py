@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Boolean, Column
 from sqlalchemy import DateTime
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy import ForeignKey
@@ -44,6 +44,12 @@ class Poll(Base):
     author_id: Mapped[int] = mapped_column(BigInteger)
 
     place: Mapped[str]
+
+    allow_later = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
 
     meeting_at: Mapped[datetime] = mapped_column(DateTime)
 

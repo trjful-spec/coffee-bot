@@ -2,7 +2,6 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from services.coffee_service import coffee_service
 
 router = Router()
 

@@ -1,0 +1,14 @@
+---
+- name: Stop coffee-bot service
+  hosts:
+#    - coffee_msk
+    - coffee_qaz
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Stop coffee-bot.service
+      ansible.builtin.systemd:
+        name: coffee-bot.service
+        state: stopped
+#        enabled: false

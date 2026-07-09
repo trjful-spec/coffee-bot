@@ -1,4 +1,3 @@
-from datetime import datetime
 from math import floor
 
 from aiogram import Router
@@ -59,32 +58,29 @@ async def coffee(message: Message):
         )
         return
 
+    settings = await settings_service.get(
+        message.chat.id,
+    )
+
     meeting = coffee_service.build_meeting(
         time,
     )
-    if meeting <= datetime.now():
+
+    if not coffee_service.can_create_short_poll(
+        meeting,
+    ):
         await message.answer(
             "❌ Нельзя создать голосование на прошедшее время."
         )
         return
 
-    settings = await settings_service.get(
-        message.chat.id,
-    )
-
-    state = coffee_service.get_poll_state(
+    if not coffee_service.can_create_normal_poll(
         meeting,
         settings.min_vote_hours,
-    )
+    ):
 
-    #
-    # До встречи меньше минимального интервала.
-    #
-    if not state.allow_later:
-
-        hours_left = max(
-            0,
-            state.hours_left,
+        hours_left = coffee_service.hours_left(
+            meeting,
         )
 
         suggested = max(
@@ -97,24 +93,20 @@ async def coffee(message: Message):
                 f"⚠️ До встречи осталось всего "
                 f"{hours_left:.1f} ч.\n\n"
 
-                f"Сейчас минимальный интервал "
-                f"составляет "
+                f"Интервал сейчас "
                 f"{settings.min_vote_hours} ч.\n\n"
 
                 "Можно:\n"
-                "• создать голосование без возможности "
+                "• создать голосование без кнопки "
                 "«Отвечу позже»;\n"
-
-                "• уменьшить минимальный интервал:\n\n"
-
-                f"/interval {suggested}"
+                "• уменьшить интервал (Рекомендую):\n"
+                f" <code> /interval {suggested} </code>"
             ),
             reply_markup=confirm_short_poll_keyboard(
                 time,
                 place,
             ),
         )
-
         return
 
     #
@@ -125,6 +117,7 @@ async def coffee(message: Message):
         author_id=message.from_user.id,
         meeting_at=meeting,
         place=place,
+        allow_later=True,
     )
 
     await send_poll(

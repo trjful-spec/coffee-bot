@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from services.coffee_service import coffee_service
+from services.settings_service import settings_service
 from utils.message_builder import build_poll_text
 
 router = Router()
@@ -40,6 +41,10 @@ async def close_poll(
         )
         return
 
+    settings = await settings_service.get(
+        message.chat.id,
+    )
+
     await coffee_service.close_poll(
         poll.id,
     )
@@ -58,9 +63,10 @@ async def close_poll(
         await message.bot.edit_message_text(
             chat_id=poll.chat_id,
             message_id=poll.message_id,
-            text=(
-                "🔒 <b>Голосование закрыто</b>\n\n"
-                + build_poll_text(dto)
+            text="🔒 <b>Голосование закрыто</b>\n\n"
+            + build_poll_text(
+                dto,
+                later_hours=settings.min_vote_hours,
             ),
             reply_markup=None,
         )

@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from services.coffee_service import coffee_service
+from services.settings_service import settings_service
 from utils.message_builder import build_poll_text
 
 router = Router()
@@ -13,6 +14,10 @@ router = Router()
 async def cancel_poll(
     message: Message,
 ):
+
+    settings = await settings_service.get(
+        message.chat.id,
+    )
 
     if not coffee_service.is_group(
         message.chat.type,
@@ -55,7 +60,10 @@ async def cancel_poll(
                 chat_id=poll.chat_id,
                 message_id=poll.message_id,
                 text="❌ <b>Голосование отменено</b>\n\n"
-                + build_poll_text(dto),
+                + build_poll_text(
+                    dto,
+                    later_hours=settings.min_vote_hours,
+                ),
                 reply_markup=None,
             )
         except TelegramBadRequest:

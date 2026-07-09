@@ -9,24 +9,19 @@ def later_deadline(
     meeting_at,
     hours: int,
 ) -> str:
-    """
-    Возвращает время, до которого можно ответить «Позже».
-    """
-
     return (
         meeting_at - timedelta(hours=hours)
     ).strftime("%H:%M")
 
 
 def build_poll_text(
-    poll: PollDTO,
-    show_later: bool = True,
-    later_hours: int = 3,
-):
+    dto: PollDTO,
+    later_hours: int,
+) -> str:
 
     votes = defaultdict(list)
 
-    for vote in poll.votes:
+    for vote in dto.votes:
         votes[vote.vote].append(
             vote.full_name,
         )
@@ -52,9 +47,9 @@ def build_poll_text(
     text = (
         "☕\n\n"
         "<b>Сбор на кофе</b>\n\n"
-        f"📅 {poll.meeting_at:%d.%m.%Y}\n"
-        f"🕘 {poll.meeting_at:%H:%M}\n"
-        f"📍 {poll.place}\n\n"
+        f"📅 {dto.meeting_at:%d.%m.%Y}\n"
+        f"🕘 {dto.meeting_at:%H:%M}\n"
+        f"📍 {dto.place}\n\n"
 
         "──────────────\n\n"
 
@@ -65,16 +60,14 @@ def build_poll_text(
         f"{render('❌ Нет', VoteType.NO)}"
     )
 
-    if show_later:
+    deadline = later_deadline(
+        dto.meeting_at,
+        later_hours,
+    )
 
-        deadline = later_deadline(
-            poll.meeting_at,
-            later_hours,
-        )
-
-        text += (
-            "\n\n──────────────\n\n"
-            f"{render(f'🤔 Отвечу до {deadline}', VoteType.LATER)}"
-        )
+    text += (
+        "\n\n──────────────\n\n"
+        f"{render(f'🤔 Отвечу до {deadline}', VoteType.LATER)}"
+    )
 
     return text

@@ -4,8 +4,6 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram import Router, F
-from aiogram.types import Message
 
 from config import config
 from database.db import init_db

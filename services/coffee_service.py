@@ -29,19 +29,28 @@ class CoffeeService:
 
 
     @staticmethod
-    def build_meeting(time: str) -> datetime:
+    def build_meeting(
+        time: str,
+    ) -> datetime:
         """
-        Собирает дату встречи.
+        Строит дату встречи по времени HH:MM.
 
         Если указанное время уже прошло сегодня,
-        считается, что встреча будет завтра.
+        встреча переносится на завтра.
         """
 
         now = datetime.now()
 
-        meeting = datetime.strptime(
-            f"{now:%Y-%m-%d} {time}",
-            "%Y-%m-%d %H:%M",
+        hour, minute = map(
+            int,
+            time.split(":"),
+        )
+
+        meeting = now.replace(
+            hour=hour,
+            minute=minute,
+            second=0,
+            microsecond=0,
         )
 
         if meeting <= now:
@@ -50,12 +59,61 @@ class CoffeeService:
         return meeting
 
     @staticmethod
+    def build_meeting_from_time(
+        meeting_at: datetime,
+        hour: int,
+        minute: int,
+    ) -> datetime:
+        """
+        Меняет только время существующей встречи.
+
+        Если получилось прошлое —
+        переносит встречу на следующий день.
+        """
+
+        meeting = meeting_at.replace(
+            hour=hour,
+            minute=minute,
+            second=0,
+            microsecond=0,
+        )
+
+        now = datetime.now()
+
+        if meeting <= now:
+            meeting += timedelta(days=1)
+
+        return meeting
+
+
+    @staticmethod
     def hours_left(
         meeting_at: datetime,
     ) -> float:
         return (
             meeting_at - datetime.now()
         ).total_seconds() / 3600
+
+
+    @staticmethod
+    def can_create_normal_poll(
+        meeting_at: datetime,
+        min_vote_hours: int,
+    ) -> bool:
+        return (
+            CoffeeService.hours_left(meeting_at)
+            >= min_vote_hours
+        )
+
+    @staticmethod
+    def can_create_short_poll(
+        meeting_at: datetime,
+    ) -> bool:
+        return (
+            CoffeeService.hours_left(meeting_at)
+            > 0
+        )
+
 
     @staticmethod
     def get_poll_state(
@@ -69,21 +127,9 @@ class CoffeeService:
 
         return PollState(
             hours_left=hours_left,
-            allow_later=(
-                hours_left >= min_vote_hours
-            ),
+            allow_later=hours_left >= min_vote_hours,
         )
 
-    @staticmethod
-    def allow_later_vote(
-        meeting_at: datetime,
-        min_vote_hours: int,
-    ) -> bool:
-        return (
-            CoffeeService.hours_left(
-                meeting_at,
-            ) >= min_vote_hours
-        )
 
     async def get_active_poll(
         self,
@@ -107,6 +153,7 @@ class CoffeeService:
         author_id: int,
         meeting_at: datetime,
         place: str,
+        allow_later: bool,
     ) -> Poll:
 
         async with Session() as session:
@@ -117,6 +164,7 @@ class CoffeeService:
                 meeting_at=meeting_at,
                 place=place,
                 status=PollStatus.ACTIVE,
+                allow_later=allow_later,
             )
 
             session.add(poll)
@@ -194,9 +242,7 @@ class CoffeeService:
         poll_id: int,
     ) -> PollDTO | None:
 
-        poll = await self.get_poll(
-            poll_id,
-        )
+        poll = await self.get_poll(poll_id)
 
         if poll is None:
             return None
@@ -233,6 +279,25 @@ class CoffeeService:
 
             await session.commit()
 
+    async def cancel_poll(
+        self,
+        poll_id: int,
+    ):
+
+        async with Session() as session:
+
+            poll = await session.get(
+                Poll,
+                poll_id,
+            )
+
+            if poll is None:
+                return
+
+            poll.status = PollStatus.CANCELLED
+
+            await session.commit()
+
     async def can_manage_poll(
         self,
         poll: Poll,
@@ -253,23 +318,5 @@ class CoffeeService:
             "creator",
         )
     
-    async def cancel_poll(
-        self,
-        poll_id: int,
-    ):
-
-        async with Session() as session:
-
-            poll = await session.get(
-                Poll,
-                poll_id,
-            )
-
-            if poll is None:
-                return
-
-            poll.status = PollStatus.CANCELLED
-
-            await session.commit()
 
 coffee_service = CoffeeService()

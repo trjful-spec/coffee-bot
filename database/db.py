@@ -40,3 +40,14 @@ async def init_db():
             )
         except Exception:
             pass
+
+        try:
+            await conn.execute(
+                text("""
+                    ALTER TABLE polls
+                    ADD COLUMN allow_later BOOLEAN DEFAULT 1
+                """)
+            )
+
+        except Exception:
+            pass

@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
@@ -9,16 +7,16 @@ from keyboards.confirm_short_poll import (
 
 from services.coffee_service import coffee_service
 from services.poll_sender import send_poll
-from services.settings_service import settings_service
 
 router = Router()
 
 
 @router.callback_query(
     ConfirmShortPollCallback.filter(
-        F.confirm == False,
+        ~F.confirm,
     )
 )
+
 async def cancel_short_poll(
     callback: CallbackQuery,
 ):
@@ -31,14 +29,14 @@ async def cancel_short_poll(
 
 @router.callback_query(
     ConfirmShortPollCallback.filter(
-        F.confirm == True,
+        F.confirm,
     )
 )
+
 async def confirm_short_poll(
     callback: CallbackQuery,
     callback_data: ConfirmShortPollCallback,
 ):
-
     #
     # Старые callback содержат HH-MM
     #
@@ -63,7 +61,7 @@ async def confirm_short_poll(
 
     #
     # Пока пользователь думал —
-    # кто-то уже создал голосование.
+    # голосование уже появилось.
     #
     active = await coffee_service.get_active_poll(
         callback.message.chat.id,
@@ -80,18 +78,13 @@ async def confirm_short_poll(
 
         return
 
-    settings = await settings_service.get(
-        callback.message.chat.id,
-    )
-
-    now = coffee_service.hours_left(
+    #
+    # Если время уже прошло —
+    # создавать нельзя.
+    #
+    if not coffee_service.can_create_short_poll(
         meeting,
-    )
-
-    #
-    # Уже прошло.
-    #
-    if now <= 0:
+    ):
 
         await callback.message.edit_reply_markup()
 
@@ -102,27 +95,22 @@ async def confirm_short_poll(
 
         return
 
-    #
-    # Проверяем,
-    # что интервал не изменился.
-    #
-    if now >= settings.min_vote_hours:
-
-        await callback.message.edit_reply_markup()
-
-        await callback.answer(
-            "Теперь голосование можно создать сразу.\n"
-            "Используйте /coffee ещё раз.",
-            show_alert=True,
-        )
-
+    if callback.from_user is None:
         return
 
+    if callback.bot is None:
+        return
+
+    #
+    # Создаем голосование БЕЗ кнопки
+    # "Отвечу позже".
+    #
     poll = await coffee_service.create_poll(
         chat_id=callback.message.chat.id,
         author_id=callback.from_user.id,
         meeting_at=meeting,
         place=callback_data.place,
+        allow_later=True,
     )
 
     await callback.message.edit_reply_markup()

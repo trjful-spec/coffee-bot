@@ -13,8 +13,14 @@
     dest: "{{ project_path }}/"
     delete: true
     rsync_opts:
-      - "--filter=merge {{ playbook_dir }}/../.rsync-filter"
-
+      - "--exclude=ansible"
+      - "--exclude=__pycache__"
+      - "--exclude=*.pyc"
+      - "--exclude=.git"
+      - "--exclude=.venv"
+      - "--exclude=logs"
+      - "--exclude=coffee.db"
+  
 - name: Set ownership
   file:
     path: "{{ project_path }}"

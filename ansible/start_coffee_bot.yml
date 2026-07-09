@@ -1,0 +1,14 @@
+---
+- name: Start coffee-bot service
+  hosts:
+#    - coffee_msk
+    - coffee_qaz
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Start coffee-bot.service
+      ansible.builtin.systemd:
+        name: coffee-bot.service
+        state: active
+        enabled: true

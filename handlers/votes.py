@@ -56,28 +56,28 @@ async def vote(
         return
 
     settings = await settings_service.get(
-        callback.message.chat.id,
-    )
+    callback.message.chat.id,
+)
 
     state = coffee_service.get_poll_state(
         poll.meeting_at,
         settings.min_vote_hours,
     )
 
-    #
-    # "Позже" больше нельзя.
-    #
     if (
         callback_data.vote == "later"
         and not state.allow_later
     ):
         await callback.answer(
-            (
-                "Время для ответа "
-                "«Отвечу позже» уже прошло."
-            ),
+            "Время для ответа «Отвечу позже» уже прошло.",
             show_alert=True,
         )
+        return
+
+    if callback.from_user is None:
+        return
+
+    if callback.bot is None:
         return
 
     await coffee_service.save_vote(
@@ -97,7 +97,6 @@ async def vote(
         await callback.message.edit_text(
             build_poll_text(
                 dto,
-                show_later=state.allow_later,
                 later_hours=settings.min_vote_hours,
             ),
             reply_markup=vote_keyboard(

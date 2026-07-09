@@ -13,7 +13,7 @@ class VoteCallback(
 
 def vote_keyboard(
     poll,
-    show_later: bool = True,
+    show_later: bool,
     later_until: str | None = None,
 ) -> InlineKeyboardMarkup:
 
@@ -50,7 +50,7 @@ def vote_keyboard(
             ),
         )
 
-        kb.adjust(3)
+        kb.adjust(2, 1)
 
     else:
         kb.adjust(2)

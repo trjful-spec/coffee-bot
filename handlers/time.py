@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
@@ -63,19 +63,11 @@ async def change_time(
         )
         return
 
-    meeting = poll.meeting_at.replace(
-        hour=new_time.hour,
-        minute=new_time.minute,
-        second=0,
-        microsecond=0,
+    meeting = coffee_service.build_meeting_from_time(
+        poll.meeting_at,
+        new_time.hour,
+        new_time.minute,
     )
-
-    #
-    # Если указанное время уже прошло,
-    # переносим встречу на следующий день.
-    #
-    if meeting <= datetime.now():
-        meeting += timedelta(days=1)
 
     await poll_service.change_time(
         poll.id,

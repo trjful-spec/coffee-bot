@@ -41,10 +41,10 @@ async def send_poll(
         settings.min_vote_hours,
     )
 
+
     msg = await source_message.answer(
         build_poll_text(
             dto,
-            show_later=state.allow_later,
             later_hours=settings.min_vote_hours,
         ),
         reply_markup=vote_keyboard(
@@ -117,14 +117,20 @@ async def update_poll_message(
             "Interval: %s",
             settings.min_vote_hours,
         )
+
+        logger.debug(
+            "Allow later: %s",
+            state.allow_later,
+        )
+
         logger.debug(
             "Text:\n%s",
             build_poll_text(
                 dto,
-                show_later=state.allow_later,
                 later_hours=settings.min_vote_hours,
             ),
         )
+
         logger.debug(
             "Later until: %s",
             later_deadline(
@@ -138,7 +144,6 @@ async def update_poll_message(
             message_id=poll.message_id,
             text=build_poll_text(
                 dto,
-                show_later=state.allow_later,
                 later_hours=settings.min_vote_hours,
             ),
             reply_markup=vote_keyboard(
@@ -150,7 +155,6 @@ async def update_poll_message(
                 ),
             ),
         )
-
 
     except TelegramBadRequest as e:
 
