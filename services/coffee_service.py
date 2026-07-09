@@ -319,4 +319,28 @@ class CoffeeService:
         )
     
 
+    async def get_all_active_polls(self) -> list[Poll]:
+        """Получает список всех активных опросов."""
+        async with Session() as session:
+            result = await session.execute(
+                select(Poll).where(
+                    Poll.status == PollStatus.ACTIVE,
+                )
+            )
+            return list(result.scalars().all())
+
+    async def get_later_voters(self, poll_id: int) -> list[Vote]:
+        """Получает список голосов пользователей, ответивших 'Отвечу позже'."""
+        async with Session() as session:
+            result = await session.execute(
+                select(Vote).where(
+                    Vote.poll_id == poll_id,
+                    # ⚠️ ВНИМАНИЕ: Проверьте ваш enum VoteType!
+                    # Замените LATER на то название, которое у вас отвечает за "отвечу позже"
+                    # (например: VoteType.LATER, VoteType.DELAY, VoteType.THINK и т.д.)
+                    Vote.vote == VoteType.LATER,
+                )
+            )
+            return list(result.scalars().all())
+
 coffee_service = CoffeeService()
