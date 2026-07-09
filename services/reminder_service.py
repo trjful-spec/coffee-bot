@@ -13,7 +13,7 @@ async def poll_reminder_worker(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            # Запрашиваем опросы, требующие внимания (активные + закрытые, но прикрепленные)
+            # Запрашиваем опросы, требующие внимания
             polls = await coffee_service.get_polls_for_worker()
 
             for poll in polls:
@@ -24,7 +24,7 @@ async def poll_reminder_worker(bot: Bot):
                 if poll.status == PollStatus.ACTIVE:
                     time_left = poll.meeting_at - now
 
-                    # 1. Время голосования вышло -> АВТОМАТИЧЕСКИ ЗАКРЫВАЕМ
+                    # 1. Время встречи наступило -> АВТОМАТИЧЕСКИ ЗАКРЫВАЕМ
                     if time_left <= timedelta(0):
                         await coffee_service.close_poll(poll.id)
                         
@@ -33,33 +33,33 @@ async def poll_reminder_worker(bot: Bot):
                                 chat_id=poll.chat_id, 
                                 text="🔒 Время голосования вышло! Сбор ответов завершен."
                             )
-                            # Если у вас есть функция обновления финального текста опроса:
                             from services.poll_sender import update_poll_message
                             await update_poll_message(bot=bot, poll_id=poll.id)
                         except Exception as e:
                             logger.error(f"Ошибка при закрытии опроса {poll.id}: {e}")
                         continue
 
-                    # Получаем настройки /interval для этого чата
+                    # Получаем настройки интервала для этого чата
                     settings = await settings_service.get(poll.chat_id)
                     interval_hours = settings.min_vote_hours
+                    
+                    # Вычисляем точное время дедлайна для кнопки "Отвечу позже"
+                    deadline = poll.meeting_at - timedelta(hours=interval_hours)
 
-                    # 2. Тегаем каждый час, начиная с (конец - interval)
-                    if timedelta(hours=1) < time_left <= timedelta(hours=interval_hours):
-                        if now.minute == 0:
-                            if poll.last_reminder_hour != now.hour:
-                                await send_later_tags(bot, poll)
-                                await coffee_service.update_reminder_state(poll.id, last_hour=now.hour)
-
-                    # 3. Финальный тег ровно за 10 минут до конца
-                    elif timedelta(minutes=9) <= time_left <= timedelta(minutes=10):
+                    # 2. Финальный тег ровно за 10 минут до конца (высший приоритет)
+                    if time_left <= timedelta(minutes=10):
                         if not poll.final_reminder_sent:
                             await send_later_tags(bot, poll)
                             await coffee_service.update_reminder_state(poll.id, final_sent=True)
 
+                    # 3. Ежечасный тег, если дедлайн "Отвечу позже" уже пройден
+                    elif now >= deadline:
+                        if poll.last_reminder_hour != now.hour:
+                            await send_later_tags(bot, poll)
+                            await coffee_service.update_reminder_state(poll.id, last_hour=now.hour)
+
                 # --- ЛОГИКА ДЛЯ ЗАКРЫТЫХ ОПРОСОВ (ОТКРЕПЛЕНИЕ ЧЕРЕЗ 2 ЧАСА) ---
                 elif poll.status == PollStatus.CLOSED and not poll.is_unpinned:
-                    # Проверяем, прошло ли 2 часа с момента meeting_at
                     if now - poll.meeting_at >= timedelta(hours=2):
                         if poll.message_id:
                             try:
@@ -71,7 +71,6 @@ async def poll_reminder_worker(bot: Bot):
                             except Exception as e:
                                 logger.error(f"Не удалось открепить сообщение {poll.message_id}: {e}")
                         
-                        # Отмечаем в БД, чтобы больше не проверять этот опрос
                         await coffee_service.mark_as_unpinned(poll.id)
 
         except Exception as e:

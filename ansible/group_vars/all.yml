@@ -1,17 +1,8 @@
 project_name: coffee-bot
-
 project_path: /opt/coffee-bot
-
 venv_path: /opt/coffee-bot/.venv
-
 python_bin: /usr/bin/python3
-
 bot_user: ubuntu
-
 bot_group: ubuntu
-
-bot_token: "8053278967:AAE6P7CQg2emPbE4VSADfvQQo2b8Uapf_Vk"
-
 default_place: "Мега"
-
 default_time: "21:00"

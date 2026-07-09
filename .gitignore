@@ -6,3 +6,4 @@ __pycache__/
 *.pyc
 .idea/
 .vscode/
+ansible/group_vars/secrets.yml
