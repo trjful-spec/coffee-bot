@@ -5,15 +5,9 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from config import config
-
-from keyboards.confirm_short_poll import (
-    confirm_short_poll_keyboard,
-)
-
 from services.coffee_service import coffee_service
 from services.poll_sender import send_poll
 from services.settings_service import settings_service
-
 from utils.coffee_parser import parse_coffee_command
 
 router = Router()
@@ -74,43 +68,34 @@ async def coffee(message: Message):
         )
         return
 
-    if not coffee_service.can_create_normal_poll(
+    hours_left = coffee_service.hours_left(
         meeting,
-        settings.min_vote_hours,
-    ):
+    )
 
-        hours_left = coffee_service.hours_left(
-            meeting,
+    # Если текущий интервал больше, чем осталось времени до встречи
+    if settings.min_vote_hours > hours_left:
+        # Если до встречи меньше часа, ставим интервал 0, 
+        # чтобы дедлайн кнопки "Отвечу позже" не уходил в прошлое
+        if hours_left < 1:
+            suggested = 0
+        else:
+            suggested = floor(hours_left)
+        
+        # Автоматически обновляем интервал в базе данных
+        await settings_service.set_interval(
+            message.chat.id,
+            suggested
         )
-
-        suggested = max(
-            1,
-            floor(hours_left),
-        )
-
+        
         await message.answer(
-            (
-                f"⚠️ До встречи осталось всего "
-                f"{hours_left:.1f} ч.\n\n"
-
-                f"Интервал сейчас "
-                f"{settings.min_vote_hours} ч.\n\n"
-
-                "Можно:\n"
-                "• создать голосование без кнопки "
-                "«Отвечу позже»;\n"
-                "• уменьшить интервал (Рекомендую):\n"
-                f" <code> /interval {suggested} </code>"
-            ),
-            reply_markup=confirm_short_poll_keyboard(
-                time,
-                place,
-            ),
+            # f"🔄 Текущий интервал ({settings.min_vote_hours} ч.) был слишком большим.\n"
+            f"Автоматически установлен интервал: <b>{suggested} ч.</b>",
+            parse_mode="HTML"
         )
-        return
 
     #
-    # Создаем обычное голосование.
+    # Создаем голосование. Кнопка "Отвечу позже" теперь будет выводиться всегда.
+    # Благодаря интервалу 0 (при времени < 1ч) кнопка не исчезнет из клавиатуры.
     #
     poll = await coffee_service.create_poll(
         chat_id=message.chat.id,

@@ -4,17 +4,13 @@ from aiogram import Bot
 from aiogram.enums import ChatType
 from aiogram.types import User
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, or_, and_
 from sqlalchemy.orm import selectinload
 
 from database.db import Session
-from database.models import Poll
-from database.models import PollStatus
-from database.models import Vote
-from database.models import VoteType
+from database.models import Poll, PollStatus, Vote, VoteType
 
-from utils.dto import PollDTO
-from utils.dto import VoteDTO
+from utils.dto import PollDTO, VoteDTO
 from utils.poll_state import PollState
 
 
@@ -321,19 +317,25 @@ class CoffeeService:
 
     async def get_polls_for_worker(self) -> list[Poll]:
         """Получает активные опросы И закрытые опросы, которые еще не откреплены."""
-        from sqlalchemy import or_, and_
         async with Session() as session:
             result = await session.execute(
                 select(Poll).where(
                     or_(
                         Poll.status == PollStatus.ACTIVE,
-                        and_(Poll.status == PollStatus.CLOSED, Poll.is_unpinned == False)
+                        # .is_(False) заменяет == False и полностью устраивает ruff
+                        and_(Poll.status == PollStatus.CLOSED, Poll.is_unpinned.is_(False))
                     )
                 )
             )
             return list(result.scalars().all())
 
-    async def update_reminder_state(self, poll_id: int, last_hour: int = None, final_sent: bool = None):
+    # Явно указываем типы int | None и bool | None для соответствия PEP 484
+    async def update_reminder_state(
+        self, 
+        poll_id: int, 
+        last_hour: int | None = None, 
+        final_sent: bool | None = None
+    ):
         """Сохраняет состояние напоминаний в базу данных."""
         async with Session() as session:
             poll = await session.get(Poll, poll_id)

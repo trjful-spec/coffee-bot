@@ -68,24 +68,10 @@ class Poll(Base):
         cascade="all, delete-orphan",
     )
 
-    class Poll(Base):
-        __tablename__ = "polls"
-
-        id: Mapped[int] = mapped_column(primary_key=True)
-        chat_id: Mapped[int] = mapped_column(BigInteger)
-        message_id: Mapped[int | None]
-        author_id: Mapped[int] = mapped_column(BigInteger)
-        place: Mapped[str]
-        allow_later = Column(Boolean, nullable=False, default=True)
-        meeting_at: Mapped[datetime] = mapped_column(DateTime)
-        status: Mapped[PollStatus] = mapped_column(SqlEnum(PollStatus), default=PollStatus.ACTIVE)
-        created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-        votes: Mapped[list["Vote"]] = relationship(back_populates="poll", cascade="all, delete-orphan")
-
-        # 👇 ДОБАВЛЯЕМ ЭТИ ТРИ СТРОКИ 👇
-        last_reminder_hour: Mapped[int | None] = mapped_column(nullable=True, default=None)
-        final_reminder_sent: Mapped[bool] = mapped_column(default=False)
-        is_unpinned: Mapped[bool] = mapped_column(default=False)
+    # Три новых поля, которые мы добавили для стабильности напоминаний:
+    last_reminder_hour: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    final_reminder_sent: Mapped[bool] = mapped_column(default=False)
+    is_unpinned: Mapped[bool] = mapped_column(default=False)
 
 
 class Vote(Base):
