@@ -2,6 +2,8 @@
 - name: Deploy Coffee Bot
   hosts: coffee_qaz
   become: true
+  vars_files:
+    - group_vars/secret.yml
 
   roles:
     - common

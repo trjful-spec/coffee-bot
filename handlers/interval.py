@@ -20,6 +20,9 @@ async def interval(message: Message):
     if not coffee_service.is_group(
         message.chat.type,
     ):
+        await message.answer(
+            "❌ Команда работает только в группах."
+        )
         return
 
     parts = message.text.split()

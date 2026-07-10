@@ -22,6 +22,9 @@ async def cancel_poll(
     if not coffee_service.is_group(
         message.chat.type,
     ):
+        await message.answer(
+            "❌ Команда работает только в группах."
+        )
         return
 
     poll = await coffee_service.get_active_poll(

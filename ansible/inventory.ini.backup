@@ -1,0 +1,14 @@
+[coffee_msk]
+coffee_vm_msk ansible_host=95.163.208.121
+
+[coffee_qaz]
+coffee_vm_qaz ansible_host=176.123.177.206
+
+
+[coffee_msk:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/Users/v.trezorov/main.key
+
+[coffee_qaz:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/Users/v.trezorov/QAZ-MAIN-KEY.pem
