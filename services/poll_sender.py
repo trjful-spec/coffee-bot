@@ -106,38 +106,47 @@ async def update_poll_message(
         settings.min_vote_hours,
     )
 
-    try:
+    logger.debug(
+        "Meeting: %s",
+        dto.meeting_at,
+    )
 
-        logger.debug(
-            "Meeting: %s",
-            dto.meeting_at,
-        )
+    logger.debug(
+        "Interval: %s",
+        settings.min_vote_hours,
+    )
 
-        logger.debug(
-            "Interval: %s",
-            settings.min_vote_hours,
-        )
+    logger.debug(
+        "Allow later: %s",
+        state.allow_later,
+    )
 
-        logger.debug(
-            "Allow later: %s",
-            state.allow_later,
-        )
+    logger.debug(
+        "Status: %s",
+        poll.status,
+    )
 
-        logger.debug(
-            "Text:\n%s",
-            build_poll_text(
-                dto,
-                later_hours=settings.min_vote_hours,
-            ),
-        )
+    logger.debug(
+        "Text:\n%s",
+        build_poll_text(
+            dto,
+            later_hours=settings.min_vote_hours,
+        ),
+    )
 
-        logger.debug(
-            "Later until: %s",
-            later_deadline(
+    reply_markup = None
+
+    if poll.status.name == "ACTIVE":
+        reply_markup = vote_keyboard(
+            dto,
+            show_later=state.allow_later,
+            later_until=later_deadline(
                 dto.meeting_at,
                 settings.min_vote_hours,
             ),
         )
+
+    try:
 
         await bot.edit_message_text(
             chat_id=poll.chat_id,
@@ -146,15 +155,15 @@ async def update_poll_message(
                 dto,
                 later_hours=settings.min_vote_hours,
             ),
-            reply_markup=vote_keyboard(
-                dto,
-                show_later=state.allow_later,
-                later_until=later_deadline(
-                    dto.meeting_at,
-                    settings.min_vote_hours,
-                ),
-            ),
+            reply_markup=reply_markup,
         )
+
+    except TelegramBadRequest as e:
+
+        if "message is not modified" in str(e):
+            return
+
+        raise
 
     except TelegramBadRequest as e:
 

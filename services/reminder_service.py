@@ -20,6 +20,8 @@ async def poll_reminder_worker(bot: Bot):
                 if not poll.meeting_at:
                     continue
 
+                reply_markup = None
+
                 # --- ЛОГИКА ДЛЯ АКТИВНЫХ ОПРОСОВ ---
                 if poll.status == PollStatus.ACTIVE:
                     time_left = poll.meeting_at - now
@@ -31,7 +33,7 @@ async def poll_reminder_worker(bot: Bot):
                         try:
                             await bot.send_message(
                                 chat_id=poll.chat_id, 
-                                text="🔒 Время голосования вышло! Сбор ответов завершен."
+                                text="🔒 Время голосования вышло!"
                             )
                             from services.poll_sender import update_poll_message
                             await update_poll_message(bot=bot, poll_id=poll.id)

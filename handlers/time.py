@@ -69,6 +69,12 @@ async def change_time(
         new_time.minute,
     )
 
+    if meeting <= datetime.now():
+        await message.answer(
+            "❌ Нельзя установить время голосования в прошлом."
+        )
+        return
+
     await poll_service.change_time(
         poll.id,
         meeting,
