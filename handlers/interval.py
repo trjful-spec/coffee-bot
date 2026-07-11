@@ -20,6 +20,9 @@ async def interval(message: Message):
     if not coffee_service.is_group(
         message.chat.type,
     ):
+        await message.answer(
+            "❌ Команда работает только в группах."
+        )
         return
 
     parts = message.text.split()
@@ -84,13 +87,13 @@ async def interval(message: Message):
 
     # Отправляем сообщение об успехе ОДИН РАЗ
     await message.answer(
-        f"✅ Минимальный интервал изменён на {hours} ч."
+        f"✅ Интервал напоминаний теперь {hours} ч."
     )
 
-    if poll:
-        from services.poll_sender import update_poll_message
+    # if poll:
+    #     from services.poll_sender import update_poll_message
 
-        await update_poll_message(
-            bot=message.bot,
-            poll_id=poll.id,
-        )
+    #     await update_poll_message(
+    #         bot=message.bot,
+    #         poll_id=poll.id,
+    #     )

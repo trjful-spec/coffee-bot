@@ -72,14 +72,16 @@ async def coffee(message: Message):
         meeting,
     )
 
-    # Если текущий интервал больше, чем осталось времени до встречи
-    if settings.min_vote_hours > hours_left:
-        # Если до встречи меньше часа, ставим интервал 0, 
-        # чтобы дедлайн кнопки "Отвечу позже" не уходил в прошлое
+    current_interval = settings.min_vote_hours
+
+    # БАГ-ФИКС: Если интервал больше или равен оставшемуся времени до встречи
+    if current_interval >= hours_left:
+        # Если до встречи меньше часа, дедлайн будет прямо сейчас (интервал 0)
         if hours_left < 1:
             suggested = 0
         else:
-            suggested = floor(hours_left)
+            # Если времени больше часа, берем половину оставшегося времени и округляем вниз
+            suggested = floor(hours_left / 2)
         
         # Автоматически обновляем интервал в базе данных
         await settings_service.set_interval(
@@ -87,11 +89,16 @@ async def coffee(message: Message):
             suggested
         )
         
+        # Выводим красивое оповещение, как заказывали
         await message.answer(
-            # f"🔄 Текущий интервал ({settings.min_vote_hours} ч.) был слишком большим.\n"
-            f"Автоматически установлен интервал: <b>{suggested} ч.</b>",
+            f"🔄 Текущий интервал ({current_interval} ч.) был слишком большим, "
+            f"так как до встречи осталось всего {hours_left:.1f} ч.\n"
+            f"⚙️ Автоматически установлен интервал: <b>{suggested} ч.</b>",
             parse_mode="HTML"
         )
+        
+        # Важно: обновляем значение локально, чтобы оно применилось к текущему опросу
+        current_interval = suggested
 
     #
     # Создаем голосование. Кнопка "Отвечу позже" теперь будет выводиться всегда.

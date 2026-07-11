@@ -43,6 +43,13 @@
   notify:
     - Restart coffee-bot
 
+- name: Set system timezone to Europe/Moscow (UTC+3)
+  ansible.builtin.command:
+    cmd: timedatectl set-timezone Europe/Moscow
+  register: tz_result
+  changed_when: "tz_result.rc == 0 and 'Europe/Moscow' not in tz_result.stdout" # Избегаем ложного статуса changed при повторном запуске
+  become: true
+
 - name: Create .env
   template:
     src: env.j2
