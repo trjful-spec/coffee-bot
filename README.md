@@ -5,7 +5,7 @@
 ---
 
 ## Warning
-Описание сгенерировано ИИ
+Описание и 90% кода сгенерировано ИИ
 
 ---
 
@@ -57,7 +57,7 @@
 ### Важное требование: Настройка Timezone
 Поскольку логика вычисления дедлайнов опирается на системное время, критически важно, чтобы часовой пояс целевого сервера совпадал с часовым поясом пользователей (например, `Europe/Moscow` для UTC+3). В противном случае расчет `time_left` внутри фонового воркера будет производиться некорректно, что приведет к сдвигу или пропуску уведомлений. Настройка таймзоны интегрирована в конфигурацию плейбука.
 
-### Структура Ansible-роли
+### Структура Ansible
 
 ```text
 ├── ansible.cfg
@@ -82,7 +82,7 @@
 └── stop_coffee_bot.yml
 ```
 
-## Развертывание из репозитория
+## Развертывание из репозитория (deploy_from_github.yml)
 При развертывании из репозитория убедитесь, что заполнены поля файла group_vars/all.yml:
 ```bash
 project_name: coffee-bot
@@ -94,17 +94,25 @@ bot_group: ubuntu
 default_place: "Мега"
 default_time: "21:00"
 ```
-И заполнен group_vars/secrets.yml
+И экспортирована переменная
 ```bash
-bot_token: "XXX"
+export BOT_TOKEN=XXX
+```
+Запуск плейбука:
+```bash
+ [$]> ansible-playbook -i inventory.ini -l prod_coffee_qaz deploy_from_github.yml
 ```
 
-## Развертывание с локального компьютера
+## Развертывание с локального компьютера (deploy_from_local.yml)
 При развертывании из локали убедитесь, что заполнены поля файла 
 ```bash
  [$]> cat .env 
-BOT_TOKEN=XXX
 DEFAULT_PLACE=Мега
 DEFAULT_TIME=21:00
 MIN_VOTE_HOURS=3
+```
+
+Запуск плейбука:
+```bash
+ [$]> ansible-playbook -i inventory.ini deploy_from_local.yml -l stage_coffee_qaz --ask-vault-password
 ```
