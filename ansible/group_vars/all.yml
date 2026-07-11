@@ -10,8 +10,6 @@ bot_user: ubuntu
 
 bot_group: ubuntu
 
-bot_token: "8053278967:AAE6P7CQg2emPbE4VSADfvQQo2b8Uapf_Vk"
-
 default_place: "Мега"
 
 default_time: "21:00"
