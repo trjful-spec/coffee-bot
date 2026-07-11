@@ -3,9 +3,13 @@
   hosts: all
   become: yes
 
+#  vars_files:
+#    - group_vars/secret.yml
+
   vars:
     repo_url: "https://github.com/trjful-spec/coffee-bot.git"
     repo_branch: "master"
+    bot_token: "{{ lookup('ansible.builtin.env', 'BOT_TOKEN') }}"
 
   tasks:
     - name: Проверяем, является ли папка Git-репозиторием
