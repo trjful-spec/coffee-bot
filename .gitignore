@@ -5,5 +5,5 @@ logs/
 __pycache__/
 *.pyc
 .idea/
+ansible/group_vars/secret.yml
 .vscode/
-ansible/group_vars/secrets.yml
