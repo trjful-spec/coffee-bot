@@ -10,7 +10,6 @@ from config import config
 from database.db import init_db
 from handlers import register_handlers
 from utils.logging import setup_logging
-
 from utils.version import *
 
 

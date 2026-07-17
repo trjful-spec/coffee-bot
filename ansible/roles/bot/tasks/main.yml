@@ -7,6 +7,14 @@
     group: "{{ bot_group }}"
     mode: "0755"
 
+- name: Create log directory
+  file:
+    path: /var/log/coffee-bot-logs
+    state: directory
+    owner: "{{ bot_user }}"
+    group: "{{ bot_group }}"
+    mode: "0755"
+
 - name: Synchronize project
   synchronize:
     src: "{{ playbook_dir }}/../"
