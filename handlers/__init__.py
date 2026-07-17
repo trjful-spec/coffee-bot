@@ -9,7 +9,7 @@ from .close import router as close_router
 from .cancel import router as cancel_router
 from .help import router as help_router
 from .time import router as time_router
-from .debug import router as debug_router
+# from .debug import router as debug_router
 from .service import router as service_router
 
 
@@ -27,4 +27,4 @@ def register_handlers(
     dp.include_router(time_router)
     dp.include_router(service_router)
     
-    dp.include_router(debug_router)
+    # dp.include_router(debug_router)
