@@ -13,6 +13,9 @@ from database.models import Poll, PollStatus, Vote, VoteType
 from utils.dto import PollDTO, VoteDTO
 from utils.poll_state import PollState
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class CoffeeService:
 
@@ -151,6 +154,7 @@ class CoffeeService:
         place: str,
         allow_later: bool,
     ) -> Poll:
+        
 
         async with Session() as session:
 
@@ -168,7 +172,19 @@ class CoffeeService:
             await session.commit()
             await session.refresh(poll)
 
-            return poll
+        logger.info(
+            (
+                "Poll #%s created "
+                "(meeting_at=%s, allow_later=%s)."
+            ),
+            poll.id,
+            meeting_at.strftime(
+                "%Y-%m-%d %H:%M"
+            ),
+            allow_later,
+        )
+
+        return poll
 
     async def set_message_id(
         self,
@@ -189,6 +205,12 @@ class CoffeeService:
             poll.message_id = message_id
 
             await session.commit()
+
+            logger.info(
+                "Poll #%s message id set to %s.",
+                poll_id,
+                message_id,
+            )
 
     async def save_vote(
         self,
@@ -275,6 +297,11 @@ class CoffeeService:
 
             await session.commit()
 
+            logger.info(
+                "Poll #%s closed.",
+                poll_id,
+            )
+
     async def cancel_poll(
         self,
         poll_id: int,
@@ -293,6 +320,11 @@ class CoffeeService:
             poll.status = PollStatus.CANCELLED
 
             await session.commit()
+
+            logger.info(
+                "Poll #%s cancelled.",
+                poll_id,
+            )
 
     async def can_manage_poll(
         self,
@@ -353,6 +385,11 @@ class CoffeeService:
             if poll:
                 poll.is_unpinned = True
                 await session.commit()
+            
+            logger.info(
+                "Poll #%s marked as unpinned.",
+                poll_id,
+            )
 
     async def get_later_voters(self, poll_id: int) -> list[Vote]:
         """Получает список голосов пользователей, ответивших 'Отвечу позже'."""
@@ -360,9 +397,6 @@ class CoffeeService:
             result = await session.execute(
                 select(Vote).where(
                     Vote.poll_id == poll_id,
-                    # ⚠️ ВНИМАНИЕ: Проверьте ваш enum VoteType!
-                    # Замените LATER на то название, которое у вас отвечает за "отвечу позже"
-                    # (например: VoteType.LATER, VoteType.DELAY, VoteType.THINK и т.д.)
                     Vote.vote == VoteType.LATER,
                 )
             )

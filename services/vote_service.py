@@ -1,7 +1,12 @@
-from sqlalchemy import delete
+import logging
+
+from sqlalchemy import delete, select
 
 from database.db import Session
 from database.models import Vote, VoteType
+
+
+logger = logging.getLogger(__name__)
 
 
 class VoteService:
@@ -14,6 +19,15 @@ class VoteService:
     ):
 
         async with Session() as session:
+
+            result = await session.execute(
+                select(Vote.vote).where(
+                    Vote.poll_id == poll_id,
+                    Vote.user_id == user.id,
+                )
+            )
+
+            old_vote = result.scalar_one_or_none()
 
             await session.execute(
                 delete(Vote).where(
@@ -33,6 +47,22 @@ class VoteService:
             )
 
             await session.commit()
+
+            if old_vote is None:
+                logger.info(
+                    "Poll #%s: user %s voted %s.",
+                    poll_id,
+                    user.id,
+                    vote.value,
+                )
+            else:
+                logger.info(
+                    "Poll #%s: user %s changed vote %s -> %s.",
+                    poll_id,
+                    user.id,
+                    old_vote,
+                    vote.value,
+                )
 
 
 vote_service = VoteService()

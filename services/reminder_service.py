@@ -28,6 +28,10 @@ async def poll_reminder_worker(bot: Bot):
 
                     # 1. Время встречи наступило -> АВТОМАТИЧЕСКИ ЗАКРЫВАЕМ
                     if time_left <= timedelta(0):
+                        logger.info(
+                            "Poll #%s voting time is over.",
+                            poll.id,
+                        )
                         await coffee_service.close_poll(poll.id)
                         
                         try:
@@ -37,8 +41,11 @@ async def poll_reminder_worker(bot: Bot):
                             )
                             from services.poll_sender import update_poll_message
                             await update_poll_message(bot=bot, poll_id=poll.id)
-                        except Exception as e:
-                            logger.error(f"Ошибка при закрытии опроса {poll.id}: {e}")
+                        except Exception:
+                            logger.exception(
+                                "Failed to close poll #%s.",
+                                poll.id,
+                            )
                         continue
 
                     # Получаем настройки интервала для этого чата
@@ -52,13 +59,32 @@ async def poll_reminder_worker(bot: Bot):
                     if time_left <= timedelta(minutes=10):
                         if not poll.final_reminder_sent:
                             await send_later_tags(bot, poll)
-                            await coffee_service.update_reminder_state(poll.id, final_sent=True)
+
+                            logger.info(
+                                "Poll #%s final reminder sent.",
+                                poll.id,
+                            )
+
+                            await coffee_service.update_reminder_state(
+                                poll.id,
+                                final_sent=True,
+                            )
 
                     # 3. Ежечасный тег, если дедлайн "Отвечу позже" уже пройден
                     elif now >= deadline:
                         if poll.last_reminder_hour != now.hour:
                             await send_later_tags(bot, poll)
-                            await coffee_service.update_reminder_state(poll.id, last_hour=now.hour)
+
+                            logger.info(
+                                "Poll #%s reminder sent (%s hour left).",
+                                poll.id,
+                                int(time_left.total_seconds() // 3600),
+                            )
+
+                            await coffee_service.update_reminder_state(
+                                poll.id,
+                                last_hour=now.hour,
+                            )
 
                 # --- ЛОГИКА ДЛЯ ЗАКРЫТЫХ ОПРОСОВ (ОТКРЕПЛЕНИЕ ЧЕРЕЗ 2 ЧАСА) ---
                 elif poll.status == PollStatus.CLOSED and not poll.is_unpinned:
@@ -69,14 +95,15 @@ async def poll_reminder_worker(bot: Bot):
                                     chat_id=poll.chat_id, 
                                     message_id=poll.message_id
                                 )
-                                logger.info(f"Сообщение {poll.message_id} успешно откреплено в чате {poll.chat_id}")
                             except Exception as e:
                                 logger.error(f"Не удалось открепить сообщение {poll.message_id}: {e}")
                         
                         await coffee_service.mark_as_unpinned(poll.id)
 
-        except Exception as e:
-            logger.error(f"Ошибка в воркере напоминаний: {e}")
+        except Exception:
+            logger.exception(
+                "Reminder worker failed."
+            )
 
         await asyncio.sleep(60)
 

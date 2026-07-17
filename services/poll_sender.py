@@ -27,9 +27,15 @@ async def send_poll(
     )
 
     if dto is None:
+        logger.error(
+            "Failed to build DTO for poll #%s.",
+            poll_id,
+        )
+
         await source_message.answer(
             "Ошибка создания голосования."
         )
+
         return
 
     settings = await settings_service.get(
@@ -69,6 +75,15 @@ async def send_poll(
 
     except TelegramBadRequest:
 
+        logger.error(
+            (
+                "Failed to pin message %s "
+                "for poll #%s."
+            ),
+            msg.message_id,
+            poll_id,
+        )
+
         await source_message.answer(
             "⚠️ Не удалось закрепить сообщение.\n"
             "Выдайте боту право закреплять сообщения."
@@ -85,9 +100,19 @@ async def update_poll_message(
     )
 
     if poll is None:
+        logger.warning(
+            "Poll #%s was not found.",
+            poll_id,
+        )
+
         return
 
     if poll.message_id is None:
+        logger.warning(
+            "Poll #%s has no message_id.",
+            poll_id,
+        )
+
         return
 
     dto = await coffee_service.get_poll_dto(
@@ -95,6 +120,11 @@ async def update_poll_message(
     )
 
     if dto is None:
+        logger.warning(
+            "Failed to build DTO for poll #%s.",
+            poll_id,
+        )
+
         return
 
     settings = await settings_service.get(
@@ -104,34 +134,6 @@ async def update_poll_message(
     state = coffee_service.get_poll_state(
         dto.meeting_at,
         settings.min_vote_hours,
-    )
-
-    logger.debug(
-        "Meeting: %s",
-        dto.meeting_at,
-    )
-
-    logger.debug(
-        "Interval: %s",
-        settings.min_vote_hours,
-    )
-
-    logger.debug(
-        "Allow later: %s",
-        state.allow_later,
-    )
-
-    logger.debug(
-        "Status: %s",
-        poll.status,
-    )
-
-    logger.debug(
-        "Text:\n%s",
-        build_poll_text(
-            dto,
-            later_hours=settings.min_vote_hours,
-        ),
     )
 
     reply_markup = None
@@ -163,11 +165,14 @@ async def update_poll_message(
         if "message is not modified" in str(e):
             return
 
-        raise
-
-    except TelegramBadRequest as e:
-
-        if "message is not modified" in str(e):
-            return
+        logger.exception(
+            (
+                "Telegram rejected update of "
+                "message %s for poll #%s: %s"
+            ),
+            poll.message_id,
+            poll_id,
+            e,
+        )
 
         raise
