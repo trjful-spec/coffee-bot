@@ -5,8 +5,11 @@ from pathlib import Path
 
 def setup_logging():
 
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
+    log_dir = Path("/var/log/coffee-bot-logs")
+    log_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
