@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from database.models import VoteType
 from utils.dto import PollDTO
@@ -8,15 +8,10 @@ def later_deadline(
     meeting_at,
     hours: int,
 ) -> str:
-    now = datetime.now()
     deadline_dt = meeting_at - timedelta(hours=hours)
-    
-    # Жесткий предохранитель: если расчетное время дедлайна оказалось в прошлом, 
-    # сдвигаем его на 5 минут вперед от текущего момента времени
-    if deadline_dt <= now:
-        deadline_dt = now + timedelta(minutes=5)
-        
+
     return deadline_dt.strftime("%H:%M")
+    
 
 
 def build_poll_text(

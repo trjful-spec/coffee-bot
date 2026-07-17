@@ -11,6 +11,8 @@ from database.db import init_db
 from handlers import register_handlers
 from utils.logging import setup_logging
 
+from utils.version import *
+
 
 async def on_startup(bot: Bot):
     # Запускаем воркер в бэкграунде (он будет крутиться в бесконечном цикле asyncio)
@@ -18,11 +20,19 @@ async def on_startup(bot: Bot):
 
 
 async def main():
+
     setup_logging()
 
-    await init_db()
-
     logger = logging.getLogger(__name__)
+
+    write_version_file()
+
+    logger.info(
+        "Coffee Bot %s started",
+        get_full_version(),
+    )
+
+    await init_db()
 
     bot = Bot(
         token=config.bot_token,
@@ -33,12 +43,9 @@ async def main():
 
     dp = Dispatcher()
 
-    # СВЯЗЫВАЕМ ФУНКЦИЮ STARTUP С ДИСПЕТЧЕРОМ
     dp.startup.register(on_startup)
 
     register_handlers(dp)
-
-    logger.info("Coffee Bot started")
 
     try:
         await dp.start_polling(bot)
