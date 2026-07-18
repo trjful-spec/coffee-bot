@@ -4,8 +4,10 @@ import logging
 from sqlalchemy import select, update
 
 from database.db import Session
-from database.models import Poll
-from database.models import PollStatus
+from database.models import (
+    Poll,
+    PollStatus,
+)
 
 
 logger = logging.getLogger(__name__)

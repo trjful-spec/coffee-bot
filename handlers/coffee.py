@@ -142,28 +142,12 @@ async def coffee(message: Message):
 
         current_interval = suggested
 
-    logger.info(
-        (
-            "Creating poll "
-            "(meeting_at=%s, place='%s')."
-        ),
-        meeting.strftime(
-            "%Y-%m-%d %H:%M",
-        ),
-        place,
-    )
-
     poll = await coffee_service.create_poll(
         chat_id=message.chat.id,
         author_id=message.from_user.id,
         meeting_at=meeting,
         place=place,
         allow_later=True,
-    )
-
-    logger.info(
-        "Poll #%s successfully created.",
-        poll.id,
     )
 
     await send_poll(

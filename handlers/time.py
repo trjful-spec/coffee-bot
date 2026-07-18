@@ -131,20 +131,6 @@ async def change_time(
         )
         return
 
-    logger.info(
-        (
-            "Changing time for poll #%s "
-            "from %s to %s."
-        ),
-        poll.id,
-        poll.meeting_at.strftime(
-            "%Y-%m-%d %H:%M",
-        ),
-        meeting.strftime(
-            "%Y-%m-%d %H:%M",
-        ),
-    )
-
     await poll_service.change_time(
         poll.id,
         meeting,
@@ -153,14 +139,6 @@ async def change_time(
     await refresh_active_poll(
         bot,
         message.chat.id,
-    )
-
-    logger.info(
-        (
-            "Poll #%s time successfully "
-            "changed."
-        ),
-        poll.id,
     )
 
     await message.answer(

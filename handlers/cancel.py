@@ -103,7 +103,7 @@ async def cancel_poll(
                 reply_markup=None,
             )
 
-            logger.info(
+            logger.debug(
                 "Poll #%s message updated.",
                 poll.id,
             )
@@ -125,7 +125,7 @@ async def cancel_poll(
                 message_id=poll.message_id,
             )
 
-            logger.info(
+            logger.debug(
                 "Poll #%s message unpinned.",
                 poll.id,
             )

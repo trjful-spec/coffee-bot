@@ -38,12 +38,6 @@ async def vote(
     callback: CallbackQuery,
     callback_data: VoteCallback,
 ):
-    logger.debug(
-        "User %s voted '%s' for poll #%s.",
-        callback.from_user.id,
-        callback_data.vote,
-        callback_data.poll_id,
-    )
 
     poll = await coffee_service.get_poll(
         callback_data.poll_id,
