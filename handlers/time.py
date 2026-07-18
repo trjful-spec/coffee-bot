@@ -9,6 +9,10 @@ from services.permission_service import permission_service
 from services.poll_service import poll_service
 from services.poll_updater import refresh_active_poll
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = Router()
 
 
@@ -17,9 +21,25 @@ async def change_time(
     message: Message,
     bot: Bot,
 ):
-    args = message.text.split(maxsplit=1)
+    logger.info(
+        "Received /time from user=%s in chat=%s.",
+        message.from_user.id,
+        message.chat.id,
+    )
+
+    args = message.text.split(
+        maxsplit=1,
+    )
 
     if len(args) != 2:
+        logger.warning(
+            (
+                "User=%s provided invalid "
+                "/time command format."
+            ),
+            message.from_user.id,
+        )
+
         await message.answer(
             "Использование:\n"
             "/time 20:30"
@@ -33,6 +53,15 @@ async def change_time(
         ).time()
 
     except ValueError:
+        logger.warning(
+            (
+                "User=%s provided invalid "
+                "time value: '%s'."
+            ),
+            message.from_user.id,
+            args[1],
+        )
+
         await message.answer(
             "❌ Неверный формат времени."
         )
@@ -43,6 +72,11 @@ async def change_time(
     )
 
     if poll is None:
+        logger.warning(
+            "No active poll found in chat=%s.",
+            message.chat.id,
+        )
+
         await message.answer(
             "⚠️ Активного голосования нет."
         )
@@ -56,6 +90,16 @@ async def change_time(
     )
 
     if not allowed:
+        logger.warning(
+            (
+                "User=%s attempted to change "
+                "time for poll #%s without "
+                "permissions."
+            ),
+            message.from_user.id,
+            poll.id,
+        )
+
         await message.answer(
             "❌ Только создатель голосования "
             "или администратор группы "
@@ -70,10 +114,36 @@ async def change_time(
     )
 
     if meeting <= datetime.now():
+        logger.warning(
+            (
+                "User=%s attempted to set "
+                "past meeting time (%s) "
+                "for poll #%s."
+            ),
+            message.from_user.id,
+            args[1],
+            poll.id,
+        )
+
         await message.answer(
-            "❌ Нельзя установить время голосования в прошлом."
+            "❌ Нельзя установить время "
+            "голосования в прошлом."
         )
         return
+
+    logger.info(
+        (
+            "Changing time for poll #%s "
+            "from %s to %s."
+        ),
+        poll.id,
+        poll.meeting_at.strftime(
+            "%Y-%m-%d %H:%M",
+        ),
+        meeting.strftime(
+            "%Y-%m-%d %H:%M",
+        ),
+    )
 
     await poll_service.change_time(
         poll.id,
@@ -85,6 +155,15 @@ async def change_time(
         message.chat.id,
     )
 
+    logger.info(
+        (
+            "Poll #%s time successfully "
+            "changed."
+        ),
+        poll.id,
+    )
+
     await message.answer(
-        f"🕘 Время изменено на {meeting:%d.%m %H:%M}"
+        f"🕘 Время изменено на "
+        f"{meeting:%d.%m %H:%M}"
     )

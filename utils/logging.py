@@ -21,7 +21,7 @@ def setup_logging():
     file = RotatingFileHandler(
         log_dir / "coffee-bot.log",
         maxBytes=10 * 1024 * 1024,
-        backupCount=5,
+        backupCount=10,
         encoding="utf-8",
     )
     file.setFormatter(formatter)
@@ -39,4 +39,4 @@ def setup_logging():
     logging.getLogger("services").setLevel(logging.INFO)
 
     # Aiogram оставляем на INFO
-    logging.getLogger("aiogram").setLevel(logging.INFO)
+    logging.getLogger("aiogram").setLevel(logging.WARNING)

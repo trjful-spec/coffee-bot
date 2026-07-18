@@ -7,6 +7,10 @@ from services.coffee_service import coffee_service
 from services.settings_service import settings_service
 from utils.message_builder import build_poll_text
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = Router()
 
 
@@ -14,20 +18,21 @@ router = Router()
 async def close_poll(
     message: Message,
 ):
-
-    # if not coffee_service.is_group(
-    #     message.chat.type,
-    # ):
-    #     await message.answer(
-    #         "❌ Команда работает только в группах."
-    #     )
-    #     return
-
     poll = await coffee_service.get_active_poll(
         message.chat.id,
     )
 
     if poll is None:
+        logger.warning(
+            (
+                "User %s tried to close poll "
+                "in chat %s, but there is no "
+                "active poll."
+            ),
+            message.from_user.id,
+            message.chat.id,
+        )
+
         await message.answer(
             "❌ Нет активного голосования."
         )
@@ -38,11 +43,29 @@ async def close_poll(
         message.from_user,
         message.bot,
     ):
+        logger.warning(
+            (
+                "User %s tried to close "
+                "poll #%s without permission."
+            ),
+            message.from_user.id,
+            poll.id,
+        )
+
         await message.answer(
             "❌ Закрыть голосование может только "
             "создатель или администратор."
         )
         return
+
+    logger.info(
+        (
+            "User %s requested closing "
+            "poll #%s."
+        ),
+        message.from_user.id,
+        poll.id,
+    )
 
     settings = await settings_service.get(
         message.chat.id,
@@ -57,6 +80,11 @@ async def close_poll(
     )
 
     if dto is None:
+        logger.warning(
+            "Failed to build DTO for poll #%s.",
+            poll.id,
+        )
+
         await message.answer(
             "⚠️ Голосование уже закрыто."
         )
@@ -66,23 +94,50 @@ async def close_poll(
         await message.bot.edit_message_text(
             chat_id=poll.chat_id,
             message_id=poll.message_id,
-            text="🔒 <b>Голосование закрыто</b>\n\n"
-            + build_poll_text(
-                dto,
-                later_hours=settings.min_vote_hours,
+            text=(
+                "🔒 <b>Голосование закрыто</b>\n\n"
+                + build_poll_text(
+                    dto,
+                    later_hours=settings.min_vote_hours,
+                )
             ),
             reply_markup=None,
         )
+
     except TelegramBadRequest:
-        pass
+        logger.warning(
+            (
+                "Failed to update message %s "
+                "for poll #%s."
+            ),
+            poll.message_id,
+            poll.id,
+        )
 
     try:
         await message.bot.unpin_chat_message(
             chat_id=poll.chat_id,
             message_id=poll.message_id,
         )
+
     except TelegramBadRequest:
-        pass
+        logger.warning(
+            (
+                "Failed to unpin message %s "
+                "for poll #%s."
+            ),
+            poll.message_id,
+            poll.id,
+        )
+
+    logger.info(
+        (
+            "Poll #%s was successfully "
+            "closed by user %s."
+        ),
+        poll.id,
+        message.from_user.id,
+    )
 
     await message.answer(
         "✅ Голосование закрыто."

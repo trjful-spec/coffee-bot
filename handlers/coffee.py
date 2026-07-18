@@ -10,25 +10,33 @@ from services.poll_sender import send_poll
 from services.settings_service import settings_service
 from utils.coffee_parser import parse_coffee_command
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = Router()
 
 
 @router.message(Command("coffee"))
 async def coffee(message: Message):
 
-    # if not coffee_service.is_group(
-    #     message.chat.type,
-    # ):
-    #     await message.answer(
-    #         "❌ Команда работает только в группах."
-    #     )
-    #     return
+    logger.info(
+        "Received /coffee from user=%s in chat=%s.",
+        message.from_user.id,
+        message.chat.id,
+    )
 
     active = await coffee_service.get_active_poll(
         message.chat.id,
     )
 
     if active is not None:
+        logger.warning(
+            "Active poll #%s already exists in chat=%s.",
+            active.id,
+            message.chat.id,
+        )
+
         await message.answer(
             "⚠️ Уже есть активное голосование."
         )
@@ -42,6 +50,14 @@ async def coffee(message: Message):
         )
 
     except ValueError:
+        logger.warning(
+            (
+                "Invalid /coffee command from "
+                "user=%s: %s"
+            ),
+            message.from_user.id,
+            message.text,
+        )
 
         await message.answer(
             "❌ Неверный формат команды.\n\n"
@@ -63,8 +79,18 @@ async def coffee(message: Message):
     if not coffee_service.can_create_short_poll(
         meeting,
     ):
+        logger.warning(
+            (
+                "User=%s attempted to create "
+                "poll for past time (%s)."
+            ),
+            message.from_user.id,
+            time,
+        )
+
         await message.answer(
-            "❌ Нельзя создать голосование на прошедшее время."
+            "❌ Нельзя создать голосование "
+            "на прошедшее время."
         )
         return
 
@@ -74,42 +100,70 @@ async def coffee(message: Message):
 
     current_interval = settings.min_vote_hours
 
-    # БАГ-ФИКС: Если интервал больше или равен оставшемуся времени до встречи
+    # Если интервал больше оставшегося времени,
+    # автоматически уменьшаем его.
     if current_interval >= hours_left:
-        # Если до встречи меньше часа, дедлайн будет прямо сейчас (интервал 0)
+
         if hours_left < 1:
             suggested = 0
         else:
-            # Если времени больше часа, берем половину оставшегося времени и округляем вниз
-            suggested = floor(hours_left / 2)
-        
-        # Автоматически обновляем интервал в базе данных
+            suggested = floor(
+                hours_left / 2,
+            )
+
+        logger.info(
+            (
+                "Interval for chat=%s changed "
+                "%s -> %s (hours_left=%.1f)."
+            ),
+            message.chat.id,
+            current_interval,
+            suggested,
+            hours_left,
+        )
+
         await settings_service.set_interval(
             message.chat.id,
-            suggested
+            suggested,
         )
-        
-        # Выводим красивое оповещение, как заказывали
+
         await message.answer(
-            f"🔄 Текущий интервал ({current_interval} ч.) был слишком большим, "
-            f"так как до встречи осталось всего {hours_left:.1f} ч.\n"
-            f"⚙️ Автоматически установлен интервал: <b>{suggested} ч.</b>",
-            parse_mode="HTML"
+            (
+                f"🔄 Текущий интервал "
+                f"({current_interval} ч.) был "
+                f"слишком большим, так как "
+                f"до встречи осталось всего "
+                f"{hours_left:.1f} ч.\n"
+                f"⚙️ Автоматически установлен "
+                f"интервал: <b>{suggested} ч.</b>"
+            ),
+            parse_mode="HTML",
         )
-        
-        # Важно: обновляем значение локально, чтобы оно применилось к текущему опросу
+
         current_interval = suggested
 
-    #
-    # Создаем голосование. Кнопка "Отвечу позже" теперь будет выводиться всегда.
-    # Благодаря интервалу 0 (при времени < 1ч) кнопка не исчезнет из клавиатуры.
-    #
+    logger.info(
+        (
+            "Creating poll "
+            "(meeting_at=%s, place='%s')."
+        ),
+        meeting.strftime(
+            "%Y-%m-%d %H:%M",
+        ),
+        place,
+    )
+
     poll = await coffee_service.create_poll(
         chat_id=message.chat.id,
         author_id=message.from_user.id,
         meeting_at=meeting,
         place=place,
         allow_later=True,
+    )
+
+    logger.info(
+        "Poll #%s successfully created.",
+        poll.id,
     )
 
     await send_poll(
