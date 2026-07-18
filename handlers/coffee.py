@@ -16,13 +16,13 @@ router = Router()
 @router.message(Command("coffee"))
 async def coffee(message: Message):
 
-    if not coffee_service.is_group(
-        message.chat.type,
-    ):
-        await message.answer(
-            "❌ Команда работает только в группах."
-        )
-        return
+    # if not coffee_service.is_group(
+    #     message.chat.type,
+    # ):
+    #     await message.answer(
+    #         "❌ Команда работает только в группах."
+    #     )
+    #     return
 
     active = await coffee_service.get_active_poll(
         message.chat.id,

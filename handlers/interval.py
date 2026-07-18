@@ -17,13 +17,13 @@ async def interval(message: Message):
     if not message.text or not message.bot:
         return
 
-    if not coffee_service.is_group(
-        message.chat.type,
-    ):
-        await message.answer(
-            "❌ Команда работает только в группах."
-        )
-        return
+    # if not coffee_service.is_group(
+    #     message.chat.type,
+    # ):
+    #     await message.answer(
+    #         "❌ Команда работает только в группах."
+    #     )
+    #     return
 
     parts = message.text.split()
 
