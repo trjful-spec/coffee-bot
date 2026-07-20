@@ -7,3 +7,4 @@ __pycache__/
 .idea/
 ansible/group_vars/secret.yml
 .vscode/
+ansible/inventory.ini
